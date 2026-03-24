@@ -1,0 +1,202 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ══════════════════════════════════════════════
+   BASE — Global Reset & CSS Variables (Finto Light Mode)
+   ══════════════════════════════════════════════ */
+@layer base {
+
+  *, *::before, *::after { @apply box-border m-0 p-0; }
+
+  html, body, #root { @apply w-full overflow-x-hidden relative bg-white; }
+
+  .font-inter {
+    font-family: 'Inter', sans-serif;
+  }
+  .font-poppins {
+    font-family: 'Poppins', sans-serif;
+  }
+
+  body {
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  :root {
+    --background:        0 0% 100%;
+    --foreground:        222 47% 11%; /* #111827 Charcoal */
+
+    --card:              0 0% 100%;
+    --card-foreground:   222 47% 11%;
+
+    --border:            210 40% 96.1%; /* #F1F5F9 Subtle Gray */
+    --input:             210 40% 96.1%;
+    --ring:              0 0% 0%; /* Black focus rings */
+
+    --primary:           76 100% 50%; /* Vibrant Brand Lime for accents in Light Mode */
+    --primary-foreground: 222 47% 11%; /* Dark text on lime */
+
+    --secondary:         162 84% 16%; /* #064E3B Forest Green */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted:             210 40% 96.1%;
+    --muted-foreground:  215 16% 47%;
+
+    --accent:            84 81% 95%; /* Very light lime */
+    --accent-foreground: 222 47% 11%;
+
+    --destructive:       0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --popover:           0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --lime:             76 100% 50%; /* Persistent Brand Lime */
+    --radius: 1.15rem; /* Slightly smaller radius for more executive feel */
+  }
+
+  .dark {
+    --background:        240 10% 2%; /* Deep Black */
+    --foreground:        0 0% 98%;
+
+    --card:              240 10% 4%; 
+    --card-foreground:   0 0% 98%;
+
+    --border:            240 3.7% 12%; /* Even subtler border */
+    --input:             240 3.7% 15.9%;
+    --ring:              76 100% 50%;
+
+    --primary:           76 100% 50%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary:         240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted:             240 3.7% 12%; 
+    --muted-foreground:  240 5% 55%;
+
+    --accent:            240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive:       0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --popover:           240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+
+    --lime:             76 100% 50%;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   COMPONENTS
+   ══════════════════════════════════════════════ */
+@layer components {
+
+  /* Modern Card (Finto Style) - Compact */
+  .card {
+    @apply bg-card text-card-foreground border border-border rounded-[1.25rem] p-5 shadow-sm transition-all duration-300;
+  }
+
+  /* Finto Buttons - Compact */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  /* Bright Contrast CTA */
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:opacity-90 shadow-lg border border-primary/10 relative overflow-hidden;
+  }
+  
+  /* Add the lime touch to primary buttons in light mode via a subtle top border or ring */
+  .dark .btn-primary {
+    @apply shadow-primary/20;
+  }
+  
+  :root:not(.dark) .btn-primary {
+    @apply border-t-[#BEF264] border-t-2 shadow-black/5;
+  }
+
+  /* Dark Forest Green CTA */
+  .btn-secondary {
+    @apply bg-[#064E3B] text-white hover:bg-[#053F2F] shadow-lg shadow-[#064E3B]/10;
+  }
+
+  .btn-ghost {
+    @apply text-[#111827] hover:bg-[#F9FAFB] border border-[#E5E7EB];
+  }
+
+  /* Input - Compact */
+  .input {
+    @apply w-full px-4 py-3 rounded-xl text-sm border border-[#E5E7EB] bg-white text-[#111827] placeholder:text-zinc-400 outline-none focus:border-[#BEF264] transition-all shadow-sm;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-black/5 bg-[#F9FAFB] text-zinc-600;
+  }
+  .badge-green  { @apply bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20; }
+  .badge-red    { @apply bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20; }
+  .badge-yellow { @apply bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20; }
+  .badge-cyan   { @apply bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-500/10 dark:text-cyan-400 dark:border-cyan-500/20; }
+
+  /* Grids */
+  .grid-2 { @apply grid grid-cols-1 md:grid-cols-2 gap-5; }
+  .grid-3 { @apply grid grid-cols-1 md:grid-cols-3 gap-5; }
+  .grid-4 { @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5; }
+
+  /* Page sections */
+  .page-header { @apply mb-12; }
+  .page-title  { @apply text-3xl sm:text-4xl font-black tracking-tight text-foreground leading-tight; }
+  .page-subtitle { @apply text-muted-foreground text-base mt-3 max-w-2xl font-medium; }
+}
+
+/* ══════════════════════════════════════════════
+   UTILITIES
+   ══════════════════════════════════════════════ */
+@layer utilities {
+
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Finto Grid Helpers */
+  .bento-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6;
+  }
+
+  .text-finto-hero {
+    @apply text-4xl sm:text-5xl lg:text-6xl font-black tracking-tighter leading-none text-foreground;
+  }
+
+  .text-finto-body {
+    @apply text-base sm:text-lg text-muted-foreground leading-relaxed font-medium;
+  }
+
+  .fade-in { animation: fadeIn 0.4s ease-out; }
+
+  /* Landing typography helpers */
+  .text-editorial-hero  { @apply text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tighter leading-[1.08]; }
+  .text-editorial-heading { @apply text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight; }
+  .text-editorial-body  { @apply text-base sm:text-lg leading-relaxed; }
+  .text-meta            { @apply text-sm text-[hsl(var(--muted-foreground))]; }
+}
+
+/* ══════════════════════════════════════════════
+   ANIMATIONS
+══════════════════════════════════════════════ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0%   { opacity: 0.5; transform: translateX(-10%); }
+  50%  { opacity: 1;   transform: translateX(5%); }
+  100% { opacity: 0.5; transform: translateX(-10%); }
+}
