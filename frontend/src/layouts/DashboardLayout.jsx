@@ -7,8 +7,8 @@ import { ThemeToggle } from '../components/ThemeToggle'
 import {
   LayoutDashboard, Search, TrendingUp, Bookmark,
   Calculator, Settings, CreditCard, Shield, LogOut,
-  Zap, Menu, X, Target, Eye, Bell, ChevronRight,
-  Activity
+  Zap, Menu, X, Target, ChevronRight,
+  Activity, Factory
 } from 'lucide-react'
 
 const navGroups = [
@@ -18,7 +18,7 @@ const navGroups = [
       { to: '/dashboard', icon: LayoutDashboard, label: 'Overview', exact: true },
       { to: '/dashboard/track', icon: Search, label: 'Analysis' },
       { to: '/dashboard/trending', icon: TrendingUp, label: 'Heatmap' },
-      { to: '/dashboard/spy', icon: Eye, label: 'Store Spy' },
+      { to: '/dashboard/supplier', icon: Factory, label: 'Supplier Finder' },
     ]
   },
   {
@@ -26,7 +26,6 @@ const navGroups = [
     items: [
       { to: '/dashboard/saved', icon: Bookmark, label: 'Vault' },
       { to: '/dashboard/calculator', icon: Calculator, label: 'Calculator' },
-      { to: '/dashboard/alerts', icon: Bell, label: 'Triggers' },
     ]
   }
 ]
@@ -150,26 +149,65 @@ export default function DashboardLayout() {
           width: 36px;
           height: 36px;
           background: var(--lime);
+          color: #000000;
           border-radius: 10px;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 4px 12px var(--lime-border);
+          box-shadow: 0 0 0 0 rgba(200,255,0,0.6);
+          animation: logo-pulse 2.5s ease-in-out infinite;
+          flex-shrink: 0;
+        }
+        @keyframes logo-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(200,255,0,0.5); }
+          50%       { box-shadow: 0 0 0 6px rgba(200,255,0,0); }
         }
         .ly-logo-name {
-          font-weight: 700;
-          font-size: 16px;
-          letter-spacing: -0.02em;
+          font-weight: 800;
+          font-size: 13px;
+          letter-spacing: -0.01em;
           color: var(--text);
-          line-height: 1;
+          line-height: 1.1;
         }
         .ly-logo-sub {
-          font-size: 10px;
+          font-size: 9px;
           font-weight: 700;
           color: var(--text3);
           text-transform: uppercase;
-          letter-spacing: 0.1em;
-          margin-top: 1px;
+          letter-spacing: 0.12em;
+          margin-top: 2px;
+        }
+
+        /* Credits bar */
+        .ly-credits-bar {
+          margin: 0 16px 12px;
+          padding: 12px;
+          background: var(--bg);
+          border: 1px solid var(--border);
+          border-radius: 12px;
+        }
+        .ly-credits-label {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 6px;
+          font-size: 9px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.12em;
+          color: var(--text3);
+        }
+        .ly-credits-track {
+          height: 4px;
+          background: var(--border);
+          border-radius: 9999px;
+          overflow: hidden;
+        }
+        .ly-credits-fill {
+          height: 100%;
+          background: var(--lime);
+          border-radius: 9999px;
+          transition: width 0.8s ease;
         }
 
         .ly-nav-body {
@@ -215,12 +253,13 @@ export default function DashboardLayout() {
           color: var(--text);
         }
         .ly-link.active {
-          background: var(--lime);
-          color: #000000;
+          background: #111827; /* Black Background */
+          color: var(--lime);  /* Lime Text */
           font-weight: 600;
-          box-shadow: 0 4px 12px var(--lime-border);
+          border-left: 3px solid var(--lime); /* Lime Side Line */
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
-        .ly-link.active svg { color: #000000 !important; }
+        .ly-link.active svg { color: var(--lime) !important; }
 
         .ly-admin-link {
           display: flex;
@@ -351,7 +390,7 @@ export default function DashboardLayout() {
         <header className="ly-mob-header">
           <Link to="/dashboard" className="ly-logo">
             <div className="ly-logo-mark">
-              <Target size={15} color="#0D0D0C" strokeWidth={2.5} />
+              <Target size={15} strokeWidth={2.5} />
             </div>
             <div className="ly-logo-text">
               <div className="ly-logo-name">TRENDHAWK</div>
@@ -388,11 +427,10 @@ export default function DashboardLayout() {
           <div className="ly-logo-wrap">
             <Link to="/dashboard" className="ly-logo">
               <div className="ly-logo-mark">
-                <Target size={18} color="#000000" strokeWidth={2.5} />
+                <Target size={18} strokeWidth={2.5} />
               </div>
               <div>
-                <div className="ly-logo-name">TRENDHAWK</div>
-                <div className="ly-logo-sub">Intelligence</div>
+                <div className="ly-logo-name">TRENDHAWK<br />INTELLIGENCE</div>
               </div>
             </Link>
           </div>
@@ -430,6 +468,22 @@ export default function DashboardLayout() {
               </div>
             ))}
           </div>
+
+          {/* Credit usage bar */}
+          {usage && !usage.isAdmin && (
+            <div className="ly-credits-bar">
+              <div className="ly-credits-label">
+                <span>Credits</span>
+                <span style={{ color: 'var(--text)' }}>{usage.used ?? 0} / {usage.limit ?? 2}</span>
+              </div>
+              <div className="ly-credits-track">
+                <div
+                  className="ly-credits-fill"
+                  style={{ width: `${Math.min(((usage.used ?? 0) / (usage.limit ?? 1)) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Bottom nav */}
           <div className="ly-bottom">

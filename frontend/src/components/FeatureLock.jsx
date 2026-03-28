@@ -12,7 +12,7 @@ import { useState } from 'react'
 import { Lock, Zap } from 'lucide-react'
 import UpsellModal from './UpsellModal'
 
-const PLAN_RANK = { free: 0, basic: 1, pro: 2, growth: 3, admin: 99 }
+const PLAN_RANK = { free: 0, pro: 1, growth: 2, admin: 99 }
 
 export default function FeatureLock({
   children,
@@ -29,8 +29,8 @@ export default function FeatureLock({
 
   if (hasAccess) return <>{children}</>
 
-  const planLabels = { basic: 'Basic', pro: 'Pro', growth: 'Growth' }
-  const planLabel = planLabels[requiredPlan] || 'Pro'
+  const planLabels = { pro: 'Professional', growth: 'Elite' }
+  const planLabel = planLabels[requiredPlan] || 'Professional'
 
   return (
     <>

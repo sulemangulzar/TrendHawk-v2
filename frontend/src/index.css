@@ -135,6 +135,10 @@
     @apply w-full px-4 py-3 rounded-xl text-sm border border-[#E5E7EB] bg-white text-[#111827] placeholder:text-zinc-400 outline-none focus:border-[#BEF264] transition-all shadow-sm;
   }
 
+  .animate-pulse {
+    animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
   /* Badge */
   .badge {
     @apply inline-flex items-center px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-black/5 bg-[#F9FAFB] text-zinc-600;
@@ -143,6 +147,14 @@
   .badge-red    { @apply bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20; }
   .badge-yellow { @apply bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20; }
   .badge-cyan   { @apply bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-500/10 dark:text-cyan-400 dark:border-cyan-500/20; }
+
+  /* Contrast Utilities */
+  .lime-pill {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-[#BEF264] text-black border border-black/10 shadow-sm;
+  }
+  .black-pill {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-[#111827] text-[#BEF264] border border-white/10 shadow-lg;
+  }
 
   /* Grids */
   .grid-2 { @apply grid grid-cols-1 md:grid-cols-2 gap-5; }
@@ -197,4 +209,66 @@
   0%   { opacity: 0.5; transform: translateX(-10%); }
   50%  { opacity: 1;   transform: translateX(5%); }
   100% { opacity: 0.5; transform: translateX(-10%); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.4); }
+}
+
+@keyframes ping-ring {
+  0%   { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.7; }
+}
+
+@keyframes gradient-x {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+
+/* ── HOT Badge ──────────────────────────── */
+.hot-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: #C8FF00;
+  color: #000;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: 1px solid rgba(200,255,0,0.4);
+  box-shadow: 0 0 8px rgba(200,255,0,0.35);
+}
+
+/* ── Live Pulse Dot ─────────────────────── */
+.live-dot {
+  position: relative;
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: #C8FF00;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+.live-dot::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 9999px;
+  background: rgba(200,255,0,0.35);
+  animation: ping-ring 1.5s ease-out infinite;
+}
+
+/* ── Gradient Animate ──────────────────── */
+.animate-gradient-x {
+  background-size: 200% 200%;
+  animation: gradient-x 4s ease infinite;
 }

@@ -1,3 +1,4 @@
+import { motion, AnimatePresence } from 'framer-motion'
 import { Link, useLocation } from 'react-router-dom'
 import { Target, ArrowRight, Menu, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
@@ -5,9 +6,9 @@ import { ThemeToggle } from './ThemeToggle'
 
 const NAV_LINKS = [
   { label: 'Solutions', id: 'features' },
-  { label: 'Intelligence', id: 'marketplaces' },
+  { label: 'Intelligence', id: 'intelligence' },
+  { label: 'Vault', id: 'marketplaces' },
   { label: 'Pricing', id: 'pricing' },
-  { label: 'Vault', to: '/dashboard/saved' },
 ]
 
 export default function Header() {
@@ -81,7 +82,7 @@ export default function Header() {
             Sign In
           </Link>
           <Link 
-            to="/login"
+            to="/signup"
             className="btn-primary btn !px-6 !py-2.5 !text-xs uppercase tracking-widest"
           >
             Get Started
@@ -101,52 +102,62 @@ export default function Header() {
       </div>
 
       {/* Mobile Menu */}
-      {mobileOpen && (
-        <div className="lg:hidden absolute top-full left-0 right-0 bg-background border-b border-border p-8 animate-in slide-in-from-top-6 duration-300 shadow-2xl">
-          <div className="space-y-4">
-            {NAV_LINKS.map(n => (
-              n.to ? (
-                <Link
-                  key={n.label}
-                  to={n.to}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="lg:hidden absolute top-full left-0 right-0 bg-background border-b border-border overflow-hidden shadow-2xl z-40"
+          >
+            <div className="p-8 space-y-4">
+              <div className="space-y-4">
+                {NAV_LINKS.map(n => (
+                  n.to ? (
+                    <Link
+                      key={n.label}
+                      to={n.to}
+                      onClick={() => setMobileOpen(false)}
+                      className="block w-full py-4 text-lg font-black text-foreground border-b border-border"
+                    >
+                      {n.label}
+                    </Link>
+                  ) : (
+                    <button
+                      key={n.label}
+                      onClick={() => scrollAction(n.id)}
+                      className="block w-full text-left py-4 text-lg font-black text-foreground border-b border-border"
+                    >
+                      {n.label}
+                    </button>
+                  )
+                ))}
+              </div>
+              <div className="mt-8 flex flex-col gap-4">
+                <div className="flex items-center justify-between p-4 bg-muted rounded-2xl">
+                  <span className="text-sm font-black text-foreground uppercase tracking-widest">Interface Theme</span>
+                  <ThemeToggle />
+                </div>
+                <Link 
+                  to="/login" 
                   onClick={() => setMobileOpen(false)}
-                  className="block w-full py-4 text-lg font-black text-foreground border-b border-border"
+                  className="btn btn-ghost w-full py-4 text-sm font-black uppercase tracking-widest text-foreground"
                 >
-                  {n.label}
+                  Sign In
                 </Link>
-              ) : (
-                <button
-                  key={n.label}
-                  onClick={() => scrollAction(n.id)}
-                  className="block w-full text-left py-4 text-lg font-black text-foreground border-b border-border"
+                <Link 
+                  to="/signup" 
+                  onClick={() => setMobileOpen(false)}
+                  className="btn-primary btn w-full py-4 text-sm font-black uppercase tracking-widest"
                 >
-                  {n.label}
-                </button>
-              )
-            ))}
-          </div>
-          <div className="mt-8 flex flex-col gap-4">
-            <div className="flex items-center justify-between p-4 bg-muted rounded-2xl">
-              <span className="text-sm font-black text-foreground uppercase tracking-widest">Interface Theme</span>
-              <ThemeToggle />
+                  Get Started
+                </Link>
+              </div>
             </div>
-            <Link 
-              to="/login" 
-              onClick={() => setMobileOpen(false)}
-              className="btn btn-ghost w-full py-4 text-sm font-black uppercase tracking-widest text-foreground"
-            >
-              Sign In
-            </Link>
-            <Link 
-              to="/login" 
-              onClick={() => setMobileOpen(false)}
-              className="btn-primary btn w-full py-4 text-sm font-black uppercase tracking-widest"
-            >
-              Get Started
-            </Link>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   )
 }

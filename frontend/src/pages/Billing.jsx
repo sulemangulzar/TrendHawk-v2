@@ -3,10 +3,37 @@ import { CreditCard, Lock, Check, Zap } from 'lucide-react'
 import { useDashboard } from '../context/DashboardContext'
 
 const PLANS = [
-  { id: 'free', name: 'Baseline Intelligence', price: 0, credits: 2, tracked: 3, features: ['Unlimited feature access', 'eBay & Etsy scraping', 'Capital profit modeling', 'Trend scoring (0-100)'], cta: 'Active Allocation', live: true },
-  { id: 'basic', name: 'Basic Operative', price: 5, credits: 10, tracked: 10, features: ['10 analysis credits/mo', 'Track up to 10 products', 'Core trend intelligence'], cta: 'Coming Soon', live: false },
-  { id: 'pro', name: 'Professional Vanguard', price: 9, credits: 20, tracked: 25, features: ['20 analysis credits/mo', 'Track up to 25 products', 'Full competitive analysis'], cta: 'Coming Soon', popular: true, live: false },
-  { id: 'growth', name: 'Enterprise Growth', price: 15, credits: 35, tracked: 50, features: ['35 analysis credits/mo', 'Track up to 50 products', 'Export analytics (CSV)'], cta: 'Coming Soon', live: false },
+  { 
+    id: 'free', 
+    name: 'Baseline Intelligence', 
+    price: 0, 
+    credits: 3, 
+    tracked: 3, 
+    features: ['3 Intelligence Searches/mo', '3 Product Save Slots', 'Half Trending Heatmap', 'Basic Market Signals'], 
+    cta: 'Active Allocation', 
+    live: true 
+  },
+  { 
+    id: 'pro', 
+    name: 'Professional Operative', 
+    price: 15, 
+    credits: 50, 
+    tracked: 50, 
+    features: ['50 Intelligence Searches/mo', '50 Product Save Slots', 'Full Heatmap Access', 'Supplier Network Unlock', 'Neural Price History'], 
+    cta: 'Coming Soon', 
+    popular: true, 
+    live: false 
+  },
+  { 
+    id: 'growth', 
+    name: 'Elite Vanguard', 
+    price: 29, 
+    credits: 110, 
+    tracked: 1000, 
+    features: ['110 Intelligence Searches/mo', '1,000 Product Save Slots', 'Priority Data Extraction', 'Bulk Analytics Export', 'Elite Trend Protocols'], 
+    cta: 'Coming Soon', 
+    live: false 
+  },
 ]
 
 export default function Billing() {

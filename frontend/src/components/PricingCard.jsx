@@ -20,9 +20,9 @@ export default function PricingCard({ plan }) {
         <div className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] mb-4">{plan.name}</div>
         <div className="flex items-baseline gap-1 mb-2">
           <span className="text-4xl sm:text-5xl font-black tracking-tighter text-foreground">
-            {plan.price === 0 ? 'Free' : `$${plan.price}`}
+            {plan.price === 0 ? 'Free' : typeof plan.price === 'string' ? plan.price : `$${plan.price}`}
           </span>
-          {plan.price > 0 && <span className="text-base text-muted-foreground font-black">/mo</span>}
+          {typeof plan.price === 'number' && plan.price > 0 && <span className="text-base text-muted-foreground font-black">/mo</span>}
         </div>
         <p className="text-xs text-muted-foreground font-medium leading-relaxed">{plan.desc}</p>
         
@@ -46,7 +46,7 @@ export default function PricingCard({ plan }) {
       </ul>
 
       <Link 
-        to="/login"
+        to="/signup"
         className={`btn w-full py-4 rounded-xl text-[11px] font-black uppercase tracking-[0.2em] transition-all text-center flex items-center justify-center gap-2 ${
           plan.soon 
             ? 'bg-muted text-muted-foreground border border-border cursor-not-allowed opacity-50' 

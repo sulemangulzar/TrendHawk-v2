@@ -36,11 +36,6 @@ export const getSaved = () => api.get('/api/saved').then(r => r.data)
 export const addSaved = (data) => api.post('/api/saved', data).then(r => r.data)
 export const deleteSaved = (id) => api.delete(`/api/saved/${id}`).then(r => r.data)
 
-// Alerts
-export const getAlerts = () => api.get('/api/alerts').then(r => r.data)
-export const createAlert = (data) => api.post('/api/alerts', data).then(r => r.data)
-export const deleteAlert = (id) => api.delete(`/api/alerts/${id}`).then(r => r.data)
-
 // Trending
 export const getTrending = (platform = 'all', limit = 20) =>
   api.get(`/api/trending?platform=${platform}&limit=${limit}`).then(r => r.data)

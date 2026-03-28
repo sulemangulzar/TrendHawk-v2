@@ -104,6 +104,8 @@ class PresetRequest(BaseModel):
     ad_spend: Optional[float] = 0
     platform_fee_pct: Optional[float] = 12.75
     other_fees: Optional[float] = 0
+    inputs: Optional[list] = []
+    results: Optional[dict] = {}
     notes: Optional[str] = None
 
 # ── Health Check ──────────────────────────────────────────────────────────────
@@ -159,25 +161,58 @@ async def scrape_product(body: ScrapeRequest, user=Depends(get_current_user)):
     if not is_admin:
         await deduct_credits(user.id, 1, supabase)
 
+    import datetime as _dt
     product = result.get("product", {})
     analysis = result.get("analysis", {})
+
+    # Compute estimated monthly metrics if not already provided
+    monthly_sales_est = product.get("monthlySales") or product.get("est_monthly_sales")
+    if not monthly_sales_est:
+        sold_qty = product.get("soldQuantity", 0) or 0
+        listing_age = product.get("listingAgeDays", 90) or 90
+        monthly_sales_est = round(sold_qty / max(listing_age / 30, 1)) if sold_qty else None
+
+    price_val = float(product.get("currentPrice") or product.get("price") or 0)
+    monthly_revenue_est = product.get("revenueEst") or product.get("est_monthly_revenue")
+    if not monthly_revenue_est and monthly_sales_est and price_val:
+        monthly_revenue_est = round(monthly_sales_est * price_val, 2)
+
+    sold_qty_int = int(product.get("soldQuantity", 0) or 0)
+    favorites_count = int(product.get("favorites", 0) or 0)
+    sell_through = None
+    if sold_qty_int and favorites_count:
+        sell_through = round((sold_qty_int / (sold_qty_int + favorites_count)) * 100, 1)
 
     formatted = {
         **product,
         "title": product.get("title") or "Unknown Product",
-        "price": product.get("currentPrice") or product.get("price", 0),
-        "currentPrice": product.get("currentPrice") or product.get("price", 0),
+        "price": price_val,
+        "currentPrice": price_val,
         "image": product.get("mainImage") or product.get("image"),
         "mainImage": product.get("mainImage") or product.get("image"),
         "currency": product.get("currency", "USD"),
         "platform": platform,
-        "rating": product.get("rating", 0),
-        "reviewsCount": product.get("reviewsCount") or product.get("reviewCount", 0),
-        "soldQuantity": product.get("soldQuantity", 0),
+        "rating": float(product.get("rating") or 0),
+        "reviewsCount": int(product.get("reviewsCount") or product.get("reviewCount") or 0),
+        "soldQuantity": sold_qty_int,
         "sellerName": product.get("sellerUsername") or product.get("sellerName"),
-        "trendScore": product.get("trendScore", 0),
+        "sellerRating": product.get("sellerRating") or product.get("seller_rating"),
+        "trendScore": int(product.get("trendScore", 0)),
         "saturationLabel": product.get("saturationLabel", "Trending"),
         "competitionLevel": analysis.get("competitionLevel", product.get("competitionLevel", "N/A")),
+        "favorites": favorites_count,
+        "inCarts": int(product.get("in_carts") or 0),
+        "watchCount": int(product.get("watchCount") or product.get("watch_count") or 0),
+        "isBestseller": bool(product.get("is_bestseller", False)),
+        # Revenue estimates
+        "estMonthlySales": monthly_sales_est,
+        "estMonthlyRevenue": monthly_revenue_est,
+        "sellThroughPercent": sell_through,
+        "listingAgeDays": int(product.get("listingAgeDays", 0) or 0),
+        # Timestamps
+        "scraped_at": _dt.datetime.utcnow().isoformat() + "Z",
+        "scrapedAt": _dt.datetime.utcnow().isoformat() + "Z",
+        # Profitability (plan-gated)
         "netProfit": 0 if skip_profit else analysis.get("netProfit", 0),
         "margin": 0 if skip_profit else analysis.get("margin", 0),
         "opportunityScore": 0 if skip_profit else analysis.get("opportunityScore", analysis.get("score", 0)),
@@ -494,8 +529,8 @@ async def add_saved(request: Request, user=Depends(get_current_user)):
     profile_res = await anyio.to_thread.run_sync(_get_profile)
     is_admin = (getattr(profile_res, "data", None) or {}).get("is_admin", False)
 
-    vault_limits = {"free": 5, "basic": 20, "pro": 50, "growth": 9999}
-    limit = 9999 if is_admin else vault_limits.get(plan_id, 5)
+    vault_limits = {"free": 3, "pro": 50, "growth": 1000}
+    limit = 9999 if is_admin else vault_limits.get(plan_id, 3)
 
     def _get_count(): return supabase.from_("saved_products").select("id", count="exact").eq("user_id", user.id).execute()
     count_res = await anyio.to_thread.run_sync(_get_count)
@@ -573,6 +608,8 @@ async def create_preset(body: PresetRequest, user=Depends(get_current_user)):
             "ad_spend": body.ad_spend,
             "platform_fee_pct": body.platform_fee_pct,
             "other_fees": body.other_fees,
+            "inputs": body.inputs,
+            "results": body.results,
             "notes": body.notes,
         }).execute()
     res = await anyio.to_thread.run_sync(_insert)

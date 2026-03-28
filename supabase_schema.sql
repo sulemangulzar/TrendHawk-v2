@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   email           TEXT,
   full_name       TEXT,
   avatar_url      TEXT,
+  country         TEXT,
+  experience_level TEXT,
+  business_niche  TEXT,
   is_admin        BOOLEAN NOT NULL DEFAULT FALSE,
   stripe_customer_id TEXT UNIQUE,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -25,12 +28,15 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, full_name, avatar_url)
+  INSERT INTO public.profiles (id, email, full_name, avatar_url, country, experience_level, business_niche)
   VALUES (
     NEW.id,
     NEW.email,
     NEW.raw_user_meta_data->>'full_name',
-    NEW.raw_user_meta_data->>'avatar_url'
+    NEW.raw_user_meta_data->>'avatar_url',
+    NEW.raw_user_meta_data->>'country',
+    NEW.raw_user_meta_data->>'experience_level',
+    NEW.raw_user_meta_data->>'business_niche'
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
@@ -189,6 +195,9 @@ CREATE TABLE IF NOT EXISTS public.calculator_presets (
   ad_spend        NUMERIC(10, 2) DEFAULT 0,
   platform_fee_pct NUMERIC(5, 2) DEFAULT 12.75, -- %
   other_fees      NUMERIC(10, 2) DEFAULT 0,
+  -- New flexible fields
+  inputs          JSONB DEFAULT '[]',
+  results         JSONB DEFAULT '{}',
   -- Optional notes
   notes           TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),

@@ -56,7 +56,6 @@ export function PricingSection({ currentPlan = "free", onUpgrade }) {
         "30 manual searches / month",
         "Track up to 15 products",
         "Elite Supplier Sourcing",
-        "Price & demand alerts",
         "Expense & Profit (Coming Soon)",
       ],
       cta: "Coming Soon",
@@ -74,7 +73,6 @@ export function PricingSection({ currentPlan = "free", onUpgrade }) {
       features: [
         "50 manual searches / month",
         "Track up to 30 products",
-        "Smart Alerts + CSV Export",
         "Sourcing + Historical Data",
         "Expense & Profit (Coming Soon)",
       ],

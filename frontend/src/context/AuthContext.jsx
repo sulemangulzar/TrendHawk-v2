@@ -31,11 +31,19 @@ export function AuthProvider({ children }) {
     return { data, error }
   }
 
-  const signUp = async (email, password, fullName) => {
+  const signUp = async (email, password, metadata = {}) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } }
+      options: { 
+        data: {
+          full_name: metadata.name,
+          country: metadata.country,
+          experience_level: metadata.experience,
+          business_niche: metadata.niche
+        },
+        emailRedirectTo: `${window.location.origin}/auth/confirm`
+      }
     })
     return { data, error }
   }

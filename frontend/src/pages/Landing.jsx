@@ -14,27 +14,27 @@ import {
 const STRATEGY_CARDS = [
   {
     icon: TrendingUp,
-    title: 'Real-time Data & Signals',
-    desc: 'Deep-scrape eBay and Etsy simultaneously. Get market trends, sell-through rates, and competitive data in seconds.',
-    bullets: ['Live market snapshots', 'Demand velocity tracking', 'Saturation analysis']
+    title: 'Precision Market Extraction',
+    desc: 'Deep-scrape eBay and Etsy protocols. Get real-time price points, trend scores, and competitive snapshots in seconds.',
+    bullets: ['Live market snapshots', 'Trend velocity scoring', 'ROI margin analysis']
   },
   {
-    icon: Eye,
-    title: 'Competitor Store Scout',
-    desc: 'Reverse engineer successful sellers. Find their winning products and see what is actually moving in real-time.',
-    bullets: ['Seller revenue estimates', 'Hidden winning products', 'Storefront intelligence']
+    icon: Globe,
+    title: 'Global Supplier Network',
+    desc: 'Instant access to 6 major sourcing platforms: Alibaba, AliExpress, 1688, DHgate, CJ Dropshipping, and Temu.',
+    bullets: ['Multi-platform search', 'Vetting & Trust signals', 'Direct sourcing links']
   },
   {
-    icon: Brain,
-    title: 'AI Product Intel',
-    desc: 'Our neural engine identifies patterns in reviews and listings to tell you exactly WHY a product is selling.',
-    bullets: ['Sentiment extraction', 'Feature gap detection', 'Painless sourcing']
+    icon: ShieldCheck,
+    title: 'Intelligence Protocol',
+    desc: 'Our data engine identifies winning market signals, ensuring you only source products with proven demand.',
+    bullets: ['Verified market signals', 'Inventory risk detection', 'Strategic sourcing']
   },
   {
     icon: Calculator,
-    title: 'ROI Precision Engine',
-    desc: 'Advanced fee calculations for all platforms. Know your real net profit before you commit to inventory.',
-    bullets: ['Multi-platform fee mapping', 'Shipping cost estimation', 'Ad spend modeling']
+    title: 'Profit Forge ROI Engine',
+    desc: 'Advanced fee calculations for major marketplaces. Know your real net profit before committing to inventory.',
+    bullets: ['Multi-platform fee mapping', 'Break-even analysis', 'Margin optimization']
   }
 ]
 
@@ -43,40 +43,37 @@ const PLANS = [
     id: 'free',
     name: 'Starter Tier',
     price: 0,
-    desc: 'Get a taste of TrendHawk intelligence',
-    credits: 2,
-    features: ['2 product analyses/mo', 'Trending products access', 'Basic profit engine', 'Track 3 products', 'Product Vault (5 slots)'],
+    desc: 'Test the TrendHawk intelligence engine',
+    credits: 3,
+    features: ['3 Intelligence Searches/mo', '3 Product Save Slots', 'Half Heatmap Access', 'Profit Forge access'],
     cta: 'Start Free'
   },
   {
-    id: 'basic',
-    name: 'Professional',
-    price: 5,
-    desc: 'For side-hustlers testing the waters',
-    credits: 10,
-    features: ['10 analyses/mo', 'Live keyword search', 'Calculator presets', 'Track 10 products', 'Product Vault (20 slots)'],
-    cta: 'Coming Soon',
-    soon: true
-  },
-  {
     id: 'pro',
-    name: 'Business Pro',
-    price: 9,
-    desc: 'For serious sellers scaling up coverage',
-    credits: 20,
-    features: ['20 analyses/mo', 'Interactive Price History', 'Saturation signals', 'Track 25 products', 'Product Vault (50 slots)'],
-    cta: 'Coming Soon',
-    soon: true
+    name: 'Professional',
+    price: 15,
+    desc: 'For side-hustlers starting their journey',
+    credits: 50,
+    features: ['50 Intelligence Searches/mo', '50 Product Save Slots', 'Full Heatmap Access', 'Supplier Network Unlock', 'Neural Price History'],
+    cta: 'Get Started'
   },
   {
     id: 'growth',
+    name: 'Elite',
+    price: 29,
+    desc: 'For serious sellers scaling coverage',
+    credits: 110,
+    features: ['110 Intelligence Searches/mo', '1,000 Product Save Slots', 'Priority Extraction', 'Bulk Analytics Export', 'Elite Trend Protocols'],
+    cta: 'Go Elite'
+  },
+  {
+    id: 'enterprise',
     name: 'Enterprise',
-    price: 15,
-    desc: 'For high-volume sellers & agencies',
-    credits: 35,
-    features: ['35 analyses/mo', 'Store Spy (Alpha)', 'Priority scraping', 'Track 50 products', 'Unlimited Vault storage'],
-    cta: 'Coming Soon',
-    soon: true
+    price: 'Custom',
+    desc: 'Custom solution for high-volume enterprise operations',
+    credits: 'Unlimited',
+    features: ['Unlimited Intelligence Searches', 'API White-labeling', 'Dedicated Support Account', 'Custom Model Training', 'Unlimited Vault & Exports'],
+    cta: 'Contact Sales'
   }
 ]
 
@@ -113,26 +110,26 @@ export default function Landing() {
               </p>
               
               <div className="flex flex-col sm:flex-row items-center gap-4 pt-4">
-                <Link to="/login" className="btn-primary btn w-full sm:w-auto px-8 py-4 text-xs font-black uppercase tracking-[0.2em] group">
+                <Link to="/signup" className="btn-primary btn w-full sm:w-auto px-8 py-4 text-xs font-black uppercase tracking-[0.2em] group">
                   Get Started 
                   <div className="ml-3 w-5 h-5 rounded-full bg-[#111827] flex items-center justify-center transition-transform group-hover:translate-x-1">
                     <ArrowRight size={12} className="text-[#BEF264]" strokeWidth={4} />
                   </div>
                 </Link>
-                <Link to="/login" className="btn-ghost btn w-full sm:w-auto px-8 py-4 text-xs font-black uppercase tracking-[0.2em] bg-transparent border border-border text-foreground hover:bg-muted/50">
+                <Link to="/signup" className="btn-ghost btn w-full sm:w-auto px-8 py-4 text-xs font-black uppercase tracking-[0.2em] bg-transparent border border-border text-foreground hover:bg-muted/50">
                   Contact Sales
                 </Link>
               </div>
 
               <div className="flex items-center gap-8 pt-6">
                 <div className="flex flex-col gap-1">
-                  <div className="text-2xl font-black text-foreground">1.2M+</div>
-                  <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none">Products Tracked</div>
+                  <div className="text-2xl font-black text-foreground uppercase tracking-tighter">Real-Time</div>
+                  <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none">Database Analysis</div>
                 </div>
                 <div className="w-px h-8 bg-border" />
                 <div className="flex flex-col gap-1">
-                  <div className="text-2xl font-black text-[#CCFF00] bg-[#09090b] px-2 py-0.5 rounded-lg w-fit shadow-lg">85%</div>
-                  <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none">Trend Accuracy</div>
+                  <div className="text-2xl font-black text-[#CCFF00] bg-[#09090b] px-2 py-0.5 rounded-lg w-fit shadow-lg uppercase tracking-tighter">Active</div>
+                  <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none">Network Signals</div>
                 </div>
               </div>
             </div>
@@ -207,7 +204,7 @@ export default function Landing() {
         <section className="py-12 bg-muted border-y border-border">
           <div className="max-w-[1440px] mx-auto px-6 flex flex-wrap items-center justify-between gap-10">
              <div className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] w-full lg:w-auto text-center lg:text-left">
-               Trusted by 500+ Dropshippers
+               Integrated Marketplace Systems
              </div>
              <div className="flex flex-wrap items-center justify-center gap-10 md:gap-16 grayscale opacity-40 hover:opacity-100 transition-opacity flex-1">
                {[
@@ -284,7 +281,7 @@ export default function Landing() {
         </section>
 
         {/* ── Section E: Breakout Discovery (Finto Style) ─────── */}
-        <section className="py-20 lg:py-32 bg-background border-y border-border">
+        <section id="intelligence" className="py-20 lg:py-32 bg-background border-y border-border">
            <div className="max-w-[1440px] mx-auto px-6 sm:px-10">
              <div className="flex flex-col lg:flex-row items-center gap-20 lg:gap-24">
                 <div className="flex-1 space-y-8 animate-finto-in">
@@ -296,13 +293,13 @@ export default function Landing() {
                       <span className="text-muted-foreground/40 italic">Opportunities Fast.</span>
                    </h2>
                    <p className="text-muted-foreground text-base sm:text-lg font-medium leading-relaxed max-w-xl">
-                     Scan millions of listings across eBay and Etsy daily. Identify \"demand spikes\" before they become saturated in your local market.
+                     Scan trending listings across eBay and Etsy daily. Identify demand spikes and price velocity before products saturate your local market.
                    </p>
                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
                      {[
-                       { title: 'eBay Breakthroughs', desc: 'Identify spikes in bidding activity.' },
-                       { title: 'Etsy Handcrafted Edge', desc: 'Discover trending artisanal niches.' },
-                       { title: 'Global Supply Nodes', desc: 'Direct access to high-velocity makers.' }
+                       { title: 'eBay Marketplace', desc: 'Real-time sales and bidding velocity.' },
+                       { title: 'Etsy Intelligence', desc: 'Trend discovery in artisan niches.' },
+                       { title: 'Sourcing Protocol', desc: 'Direct access to global supply nodes.' }
                      ].map(item => (
                        <div key={item.title} className="p-6 rounded-2xl bg-muted/50 border border-border group hover:border-primary transition-all">
                           <h4 className="text-sm font-black text-foreground mb-1">{item.title}</h4>
@@ -310,12 +307,12 @@ export default function Landing() {
                        </div>
                      ))}
                    </div>
-                   <button onClick={() => scrollAction('features')} className="btn-primary btn group">
+                   <Link to="/signup" className="btn-primary btn group">
                      Explore Intelligence 
-                     <div className="ml-3 w-5 h-5 rounded-full bg-foreground flex items-center justify-center transition-transform group-hover:translate-x-1">
-                        <ArrowRight size={12} className="text-primary" strokeWidth={4} />
+                     <div className="ml-3 w-5 h-5 rounded-full bg-[#111827] flex items-center justify-center transition-transform group-hover:translate-x-1">
+                        <ArrowRight size={12} className="text-[#BEF264]" strokeWidth={4} />
                      </div>
-                   </button>
+                   </Link>
                 </div>
 
                 <div className="flex-1 w-full lg:w-auto">
@@ -371,9 +368,9 @@ export default function Landing() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
                  {[
-                   { icon: DollarSign, title: 'Profit Forge', desc: 'Precise fee calculations for eBay, Etsy, and global shipping.' },
-                   { icon: Database, title: 'Vault Access', desc: 'Securely save and organize trending winning products.' },
-                   { icon: MoveRight, title: 'Live Pulse', desc: 'Monitor price and stock shifts across any marketplace.', gated: true }
+                   { icon: DollarSign, title: 'Profit Forge', desc: 'Precise margin and fee calculations for eBay and Etsy.' },
+                   { icon: Database, title: 'Vault Access', desc: 'Securely organize research and saved supplier insights.' },
+                   { icon: MoveRight, title: 'Live Pulse', desc: 'Monitor price and trend shifts across global marketplaces.', gated: true }
                  ].map(feat => (
                    <div key={feat.title} className="card relative !p-8 group hover:border-primary">
                       {feat.gated && (
@@ -430,16 +427,16 @@ export default function Landing() {
                      Winning Product Today.
                    </h2>
                    <p className="text-lg text-white/60 font-medium leading-relaxed max-w-xl mx-auto">
-                     Join hundreds of entrepreneurs using TrendHawk to outperform the market and build their e-commerce empire.
+                     Harness the power of TrendHawk to identify winning products and scale your store with data-driven precision.
                    </p>
                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                      <Link to="/login" className="btn btn-primary px-8 py-4 text-xs font-black uppercase tracking-widest group">
+                      <Link to="/signup" className="btn btn-primary px-8 py-4 text-xs font-black uppercase tracking-widest group">
                         Get Started Free
                         <div className="ml-3 w-5 h-5 rounded-full bg-[#111827] flex items-center justify-center transition-transform group-hover:translate-x-1">
                           <ArrowRight size={12} className="text-[#BEF264]" strokeWidth={4} />
                         </div>
                       </Link>
-                      <Link to="/login" className="text-white/40 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors">
+                      <Link to="/signup" className="text-white/40 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors">
                         View Documentation
                       </Link>
                    </div>
