@@ -48,7 +48,9 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        os.getenv("FRONTEND_URL", "https://trendhawk.vercel.app")
+        "https://trendhawk.online",
+        "https://www.trendhawk.online",
+        os.getenv("FRONTEND_URL", "https://trendhawk.online")
     ],
     allow_credentials=True,
     allow_methods=["*"],
