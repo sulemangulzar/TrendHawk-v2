@@ -1,4 +1,6 @@
+import { useEffect } from 'react'
 import { CreditCard, Lock, Check, Zap } from 'lucide-react'
+import { useDashboard } from '../context/DashboardContext'
 
 const PLANS = [
   { id: 'free', name: 'Baseline Intelligence', price: 0, credits: 2, tracked: 3, features: ['Unlimited feature access', 'eBay & Etsy scraping', 'Capital profit modeling', 'Trend scoring (0-100)'], cta: 'Active Allocation', live: true },
@@ -8,6 +10,16 @@ const PLANS = [
 ]
 
 export default function Billing() {
+  const { setGlobalLoading } = useDashboard()
+
+  useEffect(() => {
+    
+    const timer = setTimeout(() => {} , 500)
+    return () => {
+      clearTimeout(timer)
+      
+    }
+  }, [])
   return (
     <div className="animate-in fade-in slide-in-from-bottom-8 duration-500 pb-12 font-poppins text-foreground">
       

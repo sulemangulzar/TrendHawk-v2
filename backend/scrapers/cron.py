@@ -21,6 +21,8 @@ import httpx
 from bs4 import BeautifulSoup
 
 from lib.trend_score import calculate_trend_score, get_saturation_label
+from scrapers.ebay import scrape_ebay_product
+from scrapers.etsy import scrape_etsy_listing
 
 # ── Category / Niche Targets ──────────────────────────────────
 
@@ -342,6 +344,96 @@ async def refresh_global_cache() -> dict:
 
 # ── APScheduler Setup ─────────────────────────────────────────
 
+async def sync_tracked_products() -> dict:
+    """
+    Background job to keep user's Vault assets updated.
+    - Re-scrapes active tracked products
+    - Saves new prices to price_history
+    - Triggers active price_alerts if conditions are met
+    """
+    print("\n[Cron] 🔄 Starting tracked products sync...")
+    from lib.supabase_client import get_admin_client
+    supabase = get_admin_client()
+
+    try:
+        # 1. Fetch all tracked products
+        res = supabase.from_("tracked_products").select("*").execute()
+        tracked_items = res.data or []
+        if not tracked_items:
+            print("[Cron] No tracked products to sync.")
+            return {"success": True, "count": 0}
+
+        print(f"[Cron] Syncing {len(tracked_items)} tracked products...")
+
+        updated_count = 0
+        
+        # 2. Fetch active alerts
+        alerts_res = supabase.from_("price_alerts").select("*").eq("is_active", True).execute()
+        active_alerts = alerts_res.data or []
+        alerts_by_product = {}
+        for a in active_alerts:
+            pid = a["product_id"]
+            if pid not in alerts_by_product:
+                alerts_by_product[pid] = []
+            alerts_by_product[pid].append(a)
+
+        for item in tracked_items:
+            platform = item.get("platform", "").lower()
+            url = item.get("url", "")
+            if not url:
+                continue
+
+            try:
+                # ── Scrape Live ──
+                if platform == "ebay":
+                    result = await scrape_ebay_product(url)
+                elif platform == "etsy":
+                    result = await scrape_etsy_listing(url)
+                else:
+                    continue
+                
+                if not result.get("success"):
+                    continue
+                    
+                product = result.get("product", {})
+                current_price = product.get("currentPrice") or product.get("price")
+                if not current_price:
+                    continue
+                    
+                trend_score = product.get("trendScore", 0)
+
+                # ── Insert into price_history ──
+                supabase.from_("price_history").insert({
+                    "product_id": item["id"],
+                    "user_id": item["user_id"],
+                    "price": current_price,
+                    "trend_score": trend_score,
+                }).execute()
+                
+                # ── Eval Alerts ──
+                prod_alerts = alerts_by_product.get(item["id"], [])
+                for alert in prod_alerts:
+                    if alert["alert_type"] == "price_drop" and current_price <= alert["target_price"]:
+                        supabase.from_("price_alerts").update({
+                            "is_active": False,
+                        }).eq("id", alert["id"]).execute()
+                        print(f"[Cron] 🚨 Alert triggered for user {alert['user_id']} on product {item['id']}")
+
+                updated_count += 1
+                await asyncio.sleep(0.5)  # Gentle rate limiting
+                
+            except Exception as item_err:
+                print(f"[Cron] Failed to sync item {item['id']}: {item_err}")
+                continue
+
+        print(f"[Cron] ✅ Synced {updated_count} tracked products")
+        return {"success": True, "count": updated_count}
+
+    except Exception as e:
+        print(f"[Cron] ❌ Tracked products sync failed: {e}")
+        return {"success": False, "error": str(e), "count": 0}
+
+
 def create_scheduler():
     """
     Create and return an APScheduler AsyncIOScheduler instance.
@@ -370,7 +462,15 @@ def create_scheduler():
             replace_existing=True,
             max_instances=1,  # Prevent overlap
         )
-        print("[Cron] ✅ Scheduler configured — 24h global cache refresh")
+        scheduler.add_job(
+            sync_tracked_products,
+            trigger=IntervalTrigger(hours=12),
+            id="tracked_products_sync",
+            name="Tracked Products Sync",
+            replace_existing=True,
+            max_instances=1,
+        )
+        print("[Cron] ✅ Scheduler configured — 24h global refresh & 12h user tracking")
         return scheduler
 
     except ImportError:

@@ -109,11 +109,11 @@ class BaseScraper(ABC):
         """
         ua = get_random_ua()
         headers = _build_stealth_headers(ua, self.DEFAULT_REFERER)
-        proxies = self._get_proxy_dict()
+        proxy_url = self._get_proxy_url()
 
         # ── Stage 1: Datacenter Proxy ─────────────────────────
-        if proxies:
-            html = await self._httpx_fetch(url, headers, proxies)
+        if proxy_url:
+            html = await self._httpx_fetch(url, headers, proxy_url)
             if html:
                 self._log(f"✅ Datacenter proxy OK: {url[:60]}")
                 return html
@@ -173,7 +173,7 @@ class BaseScraper(ABC):
         self,
         url: str,
         headers: dict,
-        proxies: Optional[dict],
+        proxy: Optional[str],
     ) -> Optional[str]:
         """Send a request via httpx, return HTML or None."""
         kwargs = {
@@ -181,42 +181,57 @@ class BaseScraper(ABC):
             "headers": headers,
             "follow_redirects": True,
         }
-        if proxies:
-            kwargs["proxies"] = proxies
+        if proxy:
+            kwargs["proxy"] = proxy
 
-        try:
-            async with httpx.AsyncClient(**kwargs) as client:
-                res = await client.get(url)
-                if self.is_blocked_response(res):
-                    return None
-                if len(res.text) < self.MIN_HTML_SIZE:
-                    return None
-                return res.text
-        except (httpx.TimeoutException, httpx.ConnectError, httpx.ProxyError) as e:
-            self._log(f"httpx error ({type(e).__name__}): {e}")
-            return None
-        except Exception as e:
-            self._log(f"httpx unexpected error: {e}")
-            return None
+        for attempt in range(2):
+            try:
+                async with httpx.AsyncClient(**kwargs) as client:
+                    res = await client.get(url)
+                    if self.is_blocked_response(res):
+                        return None
+                    if len(res.text) < self.MIN_HTML_SIZE:
+                        return None
+                    return res.text
+            except (httpx.TimeoutException, httpx.ConnectError, httpx.ProxyError) as e:
+                self._log(f"httpx error ({type(e).__name__}): {e} (attempt {attempt+1}/2)")
+                if attempt == 0:
+                    await asyncio.sleep(1)
+                continue
+            except Exception as e:
+                self._log(f"httpx unexpected error: {e}")
+                return None
+        return None
 
     async def _playwright_fetch(self, url: str, ua: str) -> Optional[str]:
         """
         Fetch a page using Playwright + optional residential proxy.
         Uses playwright-stealth if installed for maximum bypass capability.
+        Runs in a separate thread to avoid Windows NotImplementedError with asyncio.create_subprocess_exec.
         """
+        import anyio
+        return await anyio.to_thread.run_sync(self._playwright_fetch_sync, url, ua)
+
+    def _playwright_fetch_sync(self, url: str, ua: str) -> Optional[str]:
+        import sys
+        import asyncio
+        import time
+        if sys.platform == "win32":
+            asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+            
         try:
-            from playwright.async_api import async_playwright
+            from playwright.sync_api import sync_playwright
 
             try:
-                from playwright_stealth import stealth_async
+                from playwright_stealth import stealth_sync
             except ImportError:
-                stealth_async = None
+                stealth_sync = None
 
             proxy_url = self._get_proxy_url()
             proxy_config = {"server": proxy_url} if proxy_url else None
 
-            async with async_playwright() as p:
-                browser = await p.chromium.launch(
+            with sync_playwright() as p:
+                browser = p.chromium.launch(
                     headless=True,
                     proxy=proxy_config,
                     args=[
@@ -226,7 +241,7 @@ class BaseScraper(ABC):
                         "--disable-dev-shm-usage",
                     ],
                 )
-                context = await browser.new_context(
+                context = browser.new_context(
                     viewport={"width": 1920, "height": 1080},
                     user_agent=ua,
                     locale="en-US",
@@ -235,32 +250,31 @@ class BaseScraper(ABC):
                         "DNT": "1",
                     },
                 )
-                page = await context.new_page()
+                page = context.new_page()
 
-                if stealth_async:
-                    await stealth_async(page)
+                if stealth_sync:
+                    stealth_sync(page)
 
                 # Hide webdriver flag
-                await page.evaluate(
+                page.evaluate(
                     "Object.defineProperty(navigator, 'webdriver', {get: () => false})"
                 )
 
-                await page.goto(url, wait_until="networkidle", timeout=60_000)
+                page.goto(url, wait_until="networkidle", timeout=60_000)
 
                 # Human-like scroll to trigger lazy-loaded content
-                await page.evaluate("""
-                    async () => {
-                        const delay = ms => new Promise(r => setTimeout(r, ms));
-                        for (let i = 0; i < 4; i++) {
-                            window.scrollBy(0, 300);
-                            await delay(400);
-                        }
-                    }
-                """)
-                await asyncio.sleep(1.5)
+                for _ in range(4):
+                    if not page.is_closed():
+                        page.evaluate("window.scrollBy(0, 300);")
+                        page.wait_for_timeout(400)
+                
+                if not page.is_closed():
+                    page.wait_for_timeout(1500)
+                    content = page.content()
+                else:
+                    content = ""
 
-                content = await page.content()
-                await browser.close()
+                browser.close()
 
                 if self.is_captcha(content[:8_000]):
                     self._log("⛔ Playwright also blocked (CAPTCHA)")

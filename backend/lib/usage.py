@@ -4,18 +4,21 @@ Usage/credit tracking logic (Python port of lib/usage.js)
 from supabase import Client
 from lib.plans import get_credit_limit, get_tracked_limit
 from datetime import datetime, timezone, timedelta
+import anyio
 
 
 async def check_credits(user_id: str, supabase: Client) -> dict:
     """Check if user has remaining credits. Returns allowed=True/False + metadata."""
     try:
-        usage_res = supabase.from_("user_usage").select("*").eq("user_id", user_id).maybe_single().execute()
-        profile_res = supabase.from_("profiles").select("is_admin").eq("id", user_id).maybe_single().execute()
+        def _get_usage(): return supabase.from_("user_usage").select("*").eq("user_id", user_id).maybe_single().execute()
+        def _get_profile(): return supabase.from_("profiles").select("is_admin").eq("id", user_id).maybe_single().execute()
+        usage_res = await anyio.to_thread.run_sync(_get_usage)
+        profile_res = await anyio.to_thread.run_sync(_get_profile)
     except Exception as e:
         return {"allowed": False, "error": str(e)}
 
-    usage = usage_res.data
-    is_admin = (profile_res.data or {}).get("is_admin", False)
+    usage = getattr(usage_res, "data", None)
+    is_admin = (getattr(profile_res, "data", None) or {}).get("is_admin", False)
 
     current_usage = usage or {
         "user_id": user_id,
@@ -57,15 +60,18 @@ async def check_credits(user_id: str, supabase: Client) -> dict:
 async def deduct_credits(user_id: str, amount: int, supabase: Client) -> bool:
     """Deduct credits from user's account."""
     try:
-        res = supabase.from_("user_usage").select("searches_used, tracked_count").eq("user_id", user_id).single().execute()
-        usage = res.data or {}
+        def _get_res(): return supabase.from_("user_usage").select("searches_used, tracked_count").eq("user_id", user_id).single().execute()
+        res = await anyio.to_thread.run_sync(_get_res)
+        usage = getattr(res, "data", None) or {}
         current_used = usage.get("searches_used", 0)
         current_tracked = usage.get("tracked_count", 0)
 
-        supabase.from_("user_usage").upsert(
-            {"user_id": user_id, "searches_used": current_used + amount, "tracked_count": current_tracked},
-            on_conflict="user_id"
-        ).execute()
+        def _upsert():
+            return supabase.from_("user_usage").upsert(
+                {"user_id": user_id, "searches_used": current_used + amount, "tracked_count": current_tracked},
+                on_conflict="user_id"
+            ).execute()
+        await anyio.to_thread.run_sync(_upsert)
         return True
     except Exception as e:
         print(f"[Usage] Credit deduction error: {e}")
@@ -75,12 +81,15 @@ async def deduct_credits(user_id: str, amount: int, supabase: Client) -> bool:
 async def increment_tracked(user_id: str, supabase: Client) -> bool:
     """Increment tracked product count."""
     try:
-        res = supabase.from_("user_usage").select("searches_used, tracked_count").eq("user_id", user_id).single().execute()
-        usage = res.data or {}
-        supabase.from_("user_usage").upsert(
-            {"user_id": user_id, "searches_used": usage.get("searches_used", 0), "tracked_count": usage.get("tracked_count", 0) + 1},
-            on_conflict="user_id"
-        ).execute()
+        def _get_res(): return supabase.from_("user_usage").select("searches_used, tracked_count").eq("user_id", user_id).single().execute()
+        res = await anyio.to_thread.run_sync(_get_res)
+        usage = getattr(res, "data", None) or {}
+        def _upsert():
+            return supabase.from_("user_usage").upsert(
+                {"user_id": user_id, "searches_used": usage.get("searches_used", 0), "tracked_count": usage.get("tracked_count", 0) + 1},
+                on_conflict="user_id"
+            ).execute()
+        await anyio.to_thread.run_sync(_upsert)
         return True
     except Exception as e:
         print(f"[Usage] Increment tracked error: {e}")
@@ -90,13 +99,16 @@ async def increment_tracked(user_id: str, supabase: Client) -> bool:
 async def decrement_tracked(user_id: str, supabase: Client) -> bool:
     """Decrement tracked product count."""
     try:
-        res = supabase.from_("user_usage").select("searches_used, tracked_count").eq("user_id", user_id).single().execute()
-        usage = res.data or {}
+        def _get_res(): return supabase.from_("user_usage").select("searches_used, tracked_count").eq("user_id", user_id).single().execute()
+        res = await anyio.to_thread.run_sync(_get_res)
+        usage = getattr(res, "data", None) or {}
         new_tracked = max(0, usage.get("tracked_count", 0) - 1)
-        supabase.from_("user_usage").upsert(
-            {"user_id": user_id, "searches_used": usage.get("searches_used", 0), "tracked_count": new_tracked},
-            on_conflict="user_id"
-        ).execute()
+        def _upsert():
+            return supabase.from_("user_usage").upsert(
+                {"user_id": user_id, "searches_used": usage.get("searches_used", 0), "tracked_count": new_tracked},
+                on_conflict="user_id"
+            ).execute()
+        await anyio.to_thread.run_sync(_upsert)
         return True
     except Exception as e:
         print(f"[Usage] Decrement tracked error: {e}")
@@ -106,10 +118,12 @@ async def decrement_tracked(user_id: str, supabase: Client) -> bool:
 async def can_track_more(user_id: str, supabase: Client) -> dict:
     """Check if user can track more products."""
     try:
-        usage_res = supabase.from_("user_usage").select("*").eq("user_id", user_id).maybe_single().execute()
-        profile_res = supabase.from_("profiles").select("is_admin").eq("id", user_id).maybe_single().execute()
-        usage = usage_res.data or {}
-        is_admin = (profile_res.data or {}).get("is_admin", False)
+        def _get_usage(): return supabase.from_("user_usage").select("*").eq("user_id", user_id).maybe_single().execute()
+        def _get_profile(): return supabase.from_("profiles").select("is_admin").eq("id", user_id).maybe_single().execute()
+        usage_res = await anyio.to_thread.run_sync(_get_usage)
+        profile_res = await anyio.to_thread.run_sync(_get_profile)
+        usage = getattr(usage_res, "data", None) or {}
+        is_admin = (getattr(profile_res, "data", None) or {}).get("is_admin", False)
 
         tracked_limit = get_tracked_limit(usage.get("plan", "free"))
         current_tracked = usage.get("tracked_count", 0)

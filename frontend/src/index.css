@@ -13,19 +13,17 @@
 
   html, body, #root { @apply w-full overflow-x-hidden relative bg-white; }
 
-  .font-inter {
-    font-family: 'Inter', sans-serif;
-  }
-  .font-poppins {
-    font-family: 'Poppins', sans-serif;
-  }
-
   body {
+    @apply font-poppins;
     background: hsl(var(--background));
     color: hsl(var(--foreground));
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  .font-poppins {
+    font-family: 'Poppins', sans-serif;
   }
 
   :root {

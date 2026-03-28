@@ -6,6 +6,10 @@ import os
 import sys
 import anyio
 from contextlib import asynccontextmanager
+
+if sys.platform == "win32":
+    import asyncio
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 from fastapi import FastAPI, HTTPException, Depends, Header, Request, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -30,15 +34,8 @@ _scheduler = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Start the cron scheduler on app startup, shut it down cleanly."""
-    global _scheduler
-    _scheduler = create_scheduler()
-    if _scheduler:
-        _scheduler.start()
-        print("[Main] ✅ APScheduler started")
+    # APScheduler has been decoupled into worker.py for horizontal scaling
     yield
-    if _scheduler and _scheduler.running:
-        _scheduler.shutdown(wait=False)
-        print("[Main] 🛑 APScheduler stopped")
 
 # ── App Setup ────────────────────────────────────────────────────────────────
 
@@ -65,7 +62,8 @@ async def get_current_user(authorization: str = Header(None)):
     token = authorization.split(" ")[1]
     try:
         supabase = get_admin_client()
-        res = supabase.auth.get_user(token)
+        def _get_user(): return supabase.auth.get_user(token)
+        res = await anyio.to_thread.run_sync(_get_user)
         if not res.user:
             raise HTTPException(status_code=401, detail="Invalid token")
         return res.user
@@ -74,8 +72,9 @@ async def get_current_user(authorization: str = Header(None)):
 
 async def require_admin(user=Depends(get_current_user)):
     supabase = get_admin_client()
-    profile = supabase.from_("profiles").select("is_admin").eq("id", user.id).single().execute()
-    if not (profile.data or {}).get("is_admin"):
+    def _is_admin(): return supabase.from_("profiles").select("is_admin").eq("id", user.id).maybe_single().execute()
+    profile = await anyio.to_thread.run_sync(_is_admin)
+    if not (getattr(profile, "data", None) or {}).get("is_admin"):
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
 
@@ -242,7 +241,8 @@ async def get_trending(platform: str = "all", limit: int = 20, user=Depends(get_
         query = query.eq("platform", platform)
 
     try:
-        res = query.execute()
+        def _get_query(): return query.execute()
+        res = await anyio.to_thread.run_sync(_get_query)
         products = res.data or []
     except Exception as e:
         # Handle "PGRST205: Could not find the table public.global_cache_products"
@@ -273,10 +273,12 @@ async def get_price_history(product_id: str, user=Depends(get_current_user)):
     supabase = get_admin_client()
 
     # Plan gate: Pro and above
-    usage_res = supabase.from_("user_usage").select("plan").eq("user_id", user.id).maybe_single().execute()
-    plan_id = (usage_res.data or {}).get("plan", "free")
-    profile_res = supabase.from_("profiles").select("is_admin").eq("id", user.id).maybe_single().execute()
-    is_admin = (profile_res.data or {}).get("is_admin", False)
+    def _get_usage(): return supabase.from_("user_usage").select("plan").eq("user_id", user.id).maybe_single().execute()
+    usage_res = await anyio.to_thread.run_sync(_get_usage)
+    plan_id = (getattr(usage_res, "data", None) or {}).get("plan", "free")
+    def _get_profile(): return supabase.from_("profiles").select("is_admin").eq("id", user.id).maybe_single().execute()
+    profile_res = await anyio.to_thread.run_sync(_get_profile)
+    is_admin = (getattr(profile_res, "data", None) or {}).get("is_admin", False)
 
     if not is_admin and plan_id not in ("pro", "growth"):
         raise HTTPException(status_code=403, detail={
@@ -285,12 +287,14 @@ async def get_price_history(product_id: str, user=Depends(get_current_user)):
             "requiredPlan": "pro",
         })
 
-    res = (supabase.from_("price_history")
-           .select("*")
-           .eq("product_id", product_id)
-           .eq("user_id", user.id)
-           .order("scraped_at", desc=False)
-           .execute())
+    def _get_history():
+        return (supabase.from_("price_history")
+               .select("*")
+               .eq("product_id", product_id)
+               .eq("user_id", user.id)
+               .order("scraped_at", desc=False)
+               .execute())
+    res = await anyio.to_thread.run_sync(_get_history)
 
     return {"history": res.data or [], "productId": product_id}
 
@@ -299,11 +303,13 @@ async def get_price_history(product_id: str, user=Depends(get_current_user)):
 @app.get("/api/usage")
 async def get_usage(user=Depends(get_current_user)):
     supabase = get_admin_client()
-    usage_res = supabase.from_("user_usage").select("*").eq("user_id", user.id).maybe_single().execute()
-    profile_res = supabase.from_("profiles").select("is_admin, full_name, avatar_url").eq("id", user.id).maybe_single().execute()
+    def _get_usage(): return supabase.from_("user_usage").select("*").eq("user_id", user.id).maybe_single().execute()
+    usage_res = await anyio.to_thread.run_sync(_get_usage)
+    def _get_profile(): return supabase.from_("profiles").select("is_admin, full_name, avatar_url").eq("id", user.id).maybe_single().execute()
+    profile_res = await anyio.to_thread.run_sync(_get_profile)
 
-    usage = usage_res.data or {}
-    profile = profile_res.data or {}
+    usage = getattr(usage_res, "data", None) or {}
+    profile = getattr(profile_res, "data", None) or {}
     is_admin = profile.get("is_admin", False)
 
     plan_id = "admin" if is_admin else usage.get("plan", "free")
@@ -348,8 +354,8 @@ async def get_dashboard_summary(user=Depends(get_current_user)):
             anyio.to_thread.run_sync(_get_trending)
         )
 
-        usage = usage_res.data or {}
-        profile = profile_res.data or {}
+        usage = getattr(usage_res, "data", None) or {}
+        profile = getattr(profile_res, "data", None) or {}
         is_admin = profile.get("is_admin", False)
         
         plan_id = "admin" if is_admin else usage.get("plan", "free")
@@ -385,8 +391,9 @@ def raise_e(e): raise e
 @app.get("/api/user")
 async def get_user(user=Depends(get_current_user)):
     supabase = get_admin_client()
-    profile_res = supabase.from_("profiles").select("*").eq("id", user.id).maybe_single().execute()
-    return {"user": {"id": user.id, "email": user.email, **(profile_res.data or {})}}
+    def _get_profile(): return supabase.from_("profiles").select("*").eq("id", user.id).maybe_single().execute()
+    profile_res = await anyio.to_thread.run_sync(_get_profile)
+    return {"user": {"id": user.id, "email": user.email, **(getattr(profile_res, "data", None) or {})}}
 
 @app.patch("/api/user")
 async def update_user(request: Request, user=Depends(get_current_user)):
@@ -394,7 +401,8 @@ async def update_user(request: Request, user=Depends(get_current_user)):
     supabase = get_admin_client()
     allowed = {k: body[k] for k in ["full_name", "avatar_url"] if k in body}
     if allowed:
-        supabase.from_("profiles").upsert({"id": user.id, **allowed}, on_conflict="id").execute()
+        def _upsert(): return supabase.from_("profiles").upsert({"id": user.id, **allowed}, on_conflict="id").execute()
+        await anyio.to_thread.run_sync(_upsert)
     return {"success": True}
 
 # ── Tracked Products ──────────────────────────────────────────────────────────
@@ -402,7 +410,8 @@ async def update_user(request: Request, user=Depends(get_current_user)):
 @app.get("/api/tracked")
 async def get_tracked(user=Depends(get_current_user)):
     supabase = get_admin_client()
-    res = supabase.from_("tracked_products").select("*").eq("user_id", user.id).order("created_at", desc=True).execute()
+    def _get_tracked(): return supabase.from_("tracked_products").select("*").eq("user_id", user.id).order("created_at", desc=True).execute()
+    res = await anyio.to_thread.run_sync(_get_tracked)
     return {"products": res.data or []}
 
 @app.post("/api/tracked")
@@ -418,35 +427,39 @@ async def add_tracked(request: Request, user=Depends(get_current_user)):
         })
 
     product_data = body.get("productData", body)
-    res = supabase.from_("tracked_products").insert({
-        "user_id": user.id,
-        "title": product_data.get("title"),
-        "price": product_data.get("price") or product_data.get("currentPrice"),
-        "image": product_data.get("image") or product_data.get("mainImage"),
-        "platform": product_data.get("platform"),
-        "asin": product_data.get("asin"),
-        "url": product_data.get("url"),
-        "seller": product_data.get("sellerName") or product_data.get("sellerUsername"),
-        "reviews_count": product_data.get("reviewsCount") or product_data.get("reviewCount", 0),
-        "rating": product_data.get("rating"),
-        "sold_quantity": product_data.get("soldQuantity", 0),
-        "trend_score": product_data.get("trendScore", 0),
-        "competition_level": product_data.get("competitionLevel"),
-        "raw_data": product_data,
-    }).execute()
+    def _insert():
+        return supabase.from_("tracked_products").insert({
+            "user_id": user.id,
+            "title": product_data.get("title"),
+            "price": product_data.get("price") or product_data.get("currentPrice"),
+            "image": product_data.get("image") or product_data.get("mainImage"),
+            "platform": product_data.get("platform"),
+            "asin": product_data.get("asin"),
+            "url": product_data.get("url"),
+            "seller": product_data.get("sellerName") or product_data.get("sellerUsername"),
+            "reviews_count": product_data.get("reviewsCount") or product_data.get("reviewCount", 0),
+            "rating": product_data.get("rating"),
+            "sold_quantity": product_data.get("soldQuantity", 0),
+            "trend_score": product_data.get("trendScore", 0),
+            "competition_level": product_data.get("competitionLevel"),
+            "raw_data": product_data,
+        }).execute()
+    res = await anyio.to_thread.run_sync(_insert)
 
     # Record initial price snapshot in price_history
     if res.data:
         tracked_id = res.data[0]["id"]
         price_val = product_data.get("price") or product_data.get("currentPrice")
         if price_val:
-            supabase.from_("price_history").insert({
-                "product_id": tracked_id,
-                "user_id": user.id,
-                "price": price_val,
-                "stock_level": None,
-                "trend_score": product_data.get("trendScore", 0),
-            }).execute()
+            def _insert_hist():
+                return supabase.from_("price_history").insert({
+                    "product_id": tracked_id,
+                    "user_id": user.id,
+                    "price": price_val,
+                    "stock_level": None,
+                    "trend_score": product_data.get("trendScore", 0),
+                }).execute()
+            await anyio.to_thread.run_sync(_insert_hist)
 
     await increment_tracked(user.id, supabase)
     return {"success": True, "product": res.data[0] if res.data else None}
@@ -454,7 +467,8 @@ async def add_tracked(request: Request, user=Depends(get_current_user)):
 @app.delete("/api/tracked/{product_id}")
 async def delete_tracked(product_id: str, user=Depends(get_current_user)):
     supabase = get_admin_client()
-    supabase.from_("tracked_products").delete().eq("id", product_id).eq("user_id", user.id).execute()
+    def _delete(): return supabase.from_("tracked_products").delete().eq("id", product_id).eq("user_id", user.id).execute()
+    await anyio.to_thread.run_sync(_delete)
     await decrement_tracked(user.id, supabase)
     return {"success": True}
 
@@ -463,7 +477,8 @@ async def delete_tracked(product_id: str, user=Depends(get_current_user)):
 @app.get("/api/saved")
 async def get_saved(user=Depends(get_current_user)):
     supabase = get_admin_client()
-    res = supabase.from_("saved_products").select("*").eq("user_id", user.id).order("created_at", desc=True).execute()
+    def _get_saved(): return supabase.from_("saved_products").select("*").eq("user_id", user.id).order("created_at", desc=True).execute()
+    res = await anyio.to_thread.run_sync(_get_saved)
     return {"products": res.data or []}
 
 @app.post("/api/saved")
@@ -472,15 +487,18 @@ async def add_saved(request: Request, user=Depends(get_current_user)):
     supabase = get_admin_client()
 
     # Enforce vault limits per tier
-    usage_res = supabase.from_("user_usage").select("plan").eq("user_id", user.id).maybe_single().execute()
-    plan_id = (usage_res.data or {}).get("plan", "free")
-    profile_res = supabase.from_("profiles").select("is_admin").eq("id", user.id).maybe_single().execute()
-    is_admin = (profile_res.data or {}).get("is_admin", False)
+    def _get_usage(): return supabase.from_("user_usage").select("plan").eq("user_id", user.id).maybe_single().execute()
+    usage_res = await anyio.to_thread.run_sync(_get_usage)
+    plan_id = (getattr(usage_res, "data", None) or {}).get("plan", "free")
+    def _get_profile(): return supabase.from_("profiles").select("is_admin").eq("id", user.id).maybe_single().execute()
+    profile_res = await anyio.to_thread.run_sync(_get_profile)
+    is_admin = (getattr(profile_res, "data", None) or {}).get("is_admin", False)
 
     vault_limits = {"free": 5, "basic": 20, "pro": 50, "growth": 9999}
     limit = 9999 if is_admin else vault_limits.get(plan_id, 5)
 
-    count_res = supabase.from_("saved_products").select("id", count="exact").eq("user_id", user.id).execute()
+    def _get_count(): return supabase.from_("saved_products").select("id", count="exact").eq("user_id", user.id).execute()
+    count_res = await anyio.to_thread.run_sync(_get_count)
     current_count = count_res.count or 0
 
     if current_count >= limit:
@@ -491,16 +509,19 @@ async def add_saved(request: Request, user=Depends(get_current_user)):
             "limit": limit,
         })
 
-    supabase.from_("saved_products").upsert({
-        "user_id": user.id,
-        **body,
-    }, on_conflict="user_id,url").execute()
+    def _upsert():
+        return supabase.from_("saved_products").upsert({
+            "user_id": user.id,
+            **body,
+        }, on_conflict="user_id,url").execute()
+    await anyio.to_thread.run_sync(_upsert)
     return {"success": True}
 
 @app.delete("/api/saved/{product_id}")
 async def delete_saved(product_id: str, user=Depends(get_current_user)):
     supabase = get_admin_client()
-    supabase.from_("saved_products").delete().eq("id", product_id).eq("user_id", user.id).execute()
+    def _delete(): return supabase.from_("saved_products").delete().eq("id", product_id).eq("user_id", user.id).execute()
+    await anyio.to_thread.run_sync(_delete)
     return {"success": True}
 
 # ── Calculator Presets (Basic+ feature) ──────────────────────────────────────
@@ -509,10 +530,12 @@ async def delete_saved(product_id: str, user=Depends(get_current_user)):
 async def get_presets(user=Depends(get_current_user)):
     supabase = get_admin_client()
 
-    usage_res = supabase.from_("user_usage").select("plan").eq("user_id", user.id).maybe_single().execute()
-    plan_id = (usage_res.data or {}).get("plan", "free")
-    profile_res = supabase.from_("profiles").select("is_admin").eq("id", user.id).maybe_single().execute()
-    is_admin = (profile_res.data or {}).get("is_admin", False)
+    def _get_usage(): return supabase.from_("user_usage").select("plan").eq("user_id", user.id).maybe_single().execute()
+    usage_res = await anyio.to_thread.run_sync(_get_usage)
+    plan_id = (getattr(usage_res, "data", None) or {}).get("plan", "free")
+    def _get_profile(): return supabase.from_("profiles").select("is_admin").eq("id", user.id).maybe_single().execute()
+    profile_res = await anyio.to_thread.run_sync(_get_profile)
+    is_admin = (getattr(profile_res, "data", None) or {}).get("is_admin", False)
 
     if not is_admin and plan_id == "free":
         raise HTTPException(status_code=403, detail={
@@ -520,17 +543,20 @@ async def get_presets(user=Depends(get_current_user)):
             "requiresUpgrade": True,
         })
 
-    res = supabase.from_("calculator_presets").select("*").eq("user_id", user.id).order("created_at", desc=True).execute()
+    def _get_presets(): return supabase.from_("calculator_presets").select("*").eq("user_id", user.id).order("created_at", desc=True).execute()
+    res = await anyio.to_thread.run_sync(_get_presets)
     return {"presets": res.data or []}
 
 @app.post("/api/calculator/presets")
 async def create_preset(body: PresetRequest, user=Depends(get_current_user)):
     supabase = get_admin_client()
 
-    usage_res = supabase.from_("user_usage").select("plan").eq("user_id", user.id).maybe_single().execute()
-    plan_id = (usage_res.data or {}).get("plan", "free")
-    profile_res = supabase.from_("profiles").select("is_admin").eq("id", user.id).maybe_single().execute()
-    is_admin = (profile_res.data or {}).get("is_admin", False)
+    def _get_usage(): return supabase.from_("user_usage").select("plan").eq("user_id", user.id).maybe_single().execute()
+    usage_res = await anyio.to_thread.run_sync(_get_usage)
+    plan_id = (getattr(usage_res, "data", None) or {}).get("plan", "free")
+    def _get_profile(): return supabase.from_("profiles").select("is_admin").eq("id", user.id).maybe_single().execute()
+    profile_res = await anyio.to_thread.run_sync(_get_profile)
+    is_admin = (getattr(profile_res, "data", None) or {}).get("is_admin", False)
 
     if not is_admin and plan_id == "free":
         raise HTTPException(status_code=403, detail={
@@ -538,23 +564,26 @@ async def create_preset(body: PresetRequest, user=Depends(get_current_user)):
             "requiresUpgrade": True,
         })
 
-    res = supabase.from_("calculator_presets").insert({
-        "user_id": user.id,
-        "name": body.name,
-        "item_cost": body.item_cost,
-        "shipping_cost": body.shipping_cost,
-        "ad_spend": body.ad_spend,
-        "platform_fee_pct": body.platform_fee_pct,
-        "other_fees": body.other_fees,
-        "notes": body.notes,
-    }).execute()
+    def _insert():
+        return supabase.from_("calculator_presets").insert({
+            "user_id": user.id,
+            "name": body.name,
+            "item_cost": body.item_cost,
+            "shipping_cost": body.shipping_cost,
+            "ad_spend": body.ad_spend,
+            "platform_fee_pct": body.platform_fee_pct,
+            "other_fees": body.other_fees,
+            "notes": body.notes,
+        }).execute()
+    res = await anyio.to_thread.run_sync(_insert)
 
     return {"success": True, "preset": res.data[0] if res.data else None}
 
 @app.delete("/api/calculator/presets/{preset_id}")
 async def delete_preset(preset_id: str, user=Depends(get_current_user)):
     supabase = get_admin_client()
-    supabase.from_("calculator_presets").delete().eq("id", preset_id).eq("user_id", user.id).execute()
+    def _delete(): return supabase.from_("calculator_presets").delete().eq("id", preset_id).eq("user_id", user.id).execute()
+    await anyio.to_thread.run_sync(_delete)
     return {"success": True}
 
 # ── Price Alerts ──────────────────────────────────────────────────────────────
@@ -562,25 +591,29 @@ async def delete_preset(preset_id: str, user=Depends(get_current_user)):
 @app.get("/api/alerts")
 async def get_alerts(user=Depends(get_current_user)):
     supabase = get_admin_client()
-    res = supabase.from_("price_alerts").select("*").eq("user_id", user.id).order("created_at", desc=True).execute()
+    def _get_alerts(): return supabase.from_("price_alerts").select("*").eq("user_id", user.id).order("created_at", desc=True).execute()
+    res = await anyio.to_thread.run_sync(_get_alerts)
     return {"alerts": res.data or []}
 
 @app.post("/api/alerts")
 async def create_alert(body: AlertRequest, user=Depends(get_current_user)):
     supabase = get_admin_client()
-    res = supabase.from_("price_alerts").insert({
-        "user_id": user.id,
-        "product_id": body.productId,
-        "target_price": body.targetPrice,
-        "alert_type": body.alertType,
-        "is_active": True,
-    }).execute()
+    def _insert():
+        return supabase.from_("price_alerts").insert({
+            "user_id": user.id,
+            "product_id": body.productId,
+            "target_price": body.targetPrice,
+            "alert_type": body.alertType,
+            "is_active": True,
+        }).execute()
+    res = await anyio.to_thread.run_sync(_insert)
     return {"success": True, "alert": res.data[0] if res.data else None}
 
 @app.delete("/api/alerts/{alert_id}")
 async def delete_alert(alert_id: str, user=Depends(get_current_user)):
     supabase = get_admin_client()
-    supabase.from_("price_alerts").delete().eq("id", alert_id).eq("user_id", user.id).execute()
+    def _delete(): return supabase.from_("price_alerts").delete().eq("id", alert_id).eq("user_id", user.id).execute()
+    await anyio.to_thread.run_sync(_delete)
     return {"success": True}
 
 # ── Plans ─────────────────────────────────────────────────────────────────────
@@ -594,8 +627,10 @@ def get_plans():
 @app.get("/api/admin/users")
 async def admin_get_users(user=Depends(require_admin)):
     supabase = get_admin_client()
-    profiles = supabase.from_("profiles").select("*").execute()
-    usage = supabase.from_("user_usage").select("*").execute()
+    def _get_profiles(): return supabase.from_("profiles").select("*").execute()
+    def _get_usage(): return supabase.from_("user_usage").select("*").execute()
+    profiles = await anyio.to_thread.run_sync(_get_profiles)
+    usage = await anyio.to_thread.run_sync(_get_usage)
     usage_map = {u["user_id"]: u for u in (usage.data or [])}
 
     users = []
@@ -616,7 +651,8 @@ async def admin_update_plan(user_id: str, request: Request, admin=Depends(requir
     body = await request.json()
     plan = body.get("plan", "free")
     supabase = get_admin_client()
-    supabase.from_("user_usage").upsert({"user_id": user_id, "plan": plan}, on_conflict="user_id").execute()
+    def _upsert(): return supabase.from_("user_usage").upsert({"user_id": user_id, "plan": plan}, on_conflict="user_id").execute()
+    await anyio.to_thread.run_sync(_upsert)
     return {"success": True}
 
 @app.patch("/api/admin/users/{user_id}/credits")
@@ -624,7 +660,8 @@ async def admin_update_credits(user_id: str, request: Request, admin=Depends(req
     body = await request.json()
     credits = body.get("credits", 0)
     supabase = get_admin_client()
-    supabase.from_("user_usage").upsert({"user_id": user_id, "searches_used": credits}, on_conflict="user_id").execute()
+    def _upsert(): return supabase.from_("user_usage").upsert({"user_id": user_id, "searches_used": credits}, on_conflict="user_id").execute()
+    await anyio.to_thread.run_sync(_upsert)
     return {"success": True}
 
 @app.patch("/api/admin/users/{user_id}/admin")
@@ -632,7 +669,8 @@ async def admin_toggle_admin(user_id: str, request: Request, admin=Depends(requi
     body = await request.json()
     is_admin = body.get("is_admin", False)
     supabase = get_admin_client()
-    supabase.from_("profiles").update({"is_admin": is_admin}).eq("id", user_id).execute()
+    def _update(): return supabase.from_("profiles").update({"is_admin": is_admin}).eq("id", user_id).execute()
+    await anyio.to_thread.run_sync(_update)
     return {"success": True}
 
 @app.post("/api/admin/cache/refresh")
@@ -647,7 +685,8 @@ async def admin_refresh_cache(admin=Depends(require_admin)):
 async def admin_get_stats(admin=Depends(require_admin)):
     supabase = get_admin_client()
 
-    usage_res = supabase.from_("user_usage").select("plan").execute()
+    def _get_usage(): return supabase.from_("user_usage").select("plan").execute()
+    usage_res = await anyio.to_thread.run_sync(_get_usage)
     usage_data = usage_res.data or []
 
     plan_counts = {"free": 0, "basic": 0, "pro": 0, "growth": 0, "admin": 0}
@@ -659,11 +698,13 @@ async def admin_get_stats(admin=Depends(require_admin)):
     paid_users = sum(v for k, v in plan_counts.items() if k not in ("free",))
 
     # Cache info
-    cache_res = (supabase.from_("global_cache_products")
+    def _get_cache():
+        return (supabase.from_("global_cache_products")
                  .select("scraped_at, platform", count="exact")
                  .order("scraped_at", desc=True)
                  .limit(1)
                  .execute())
+    cache_res = await anyio.to_thread.run_sync(_get_cache)
     cache_data = (cache_res.data or [{}])[0]
     cache_count = cache_res.count or 0
 

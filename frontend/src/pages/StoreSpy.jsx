@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react'
 import { searchProducts, getUsage, addSaved } from '../lib/api'
+import { useDashboard } from '../context/DashboardContext'
 import toast from 'react-hot-toast'
 import { 
   Search, Target, TrendingUp, ShoppingCart, 
   ExternalLink, Package, RefreshCw, Eye, 
-  Flame, Star, UserCheck
+  Flame, Star, UserCheck, Activity, Globe, Info
 } from 'lucide-react'
 import FeatureLock from '../components/FeatureLock'
 
 export default function StoreSpy() {
+  const { setGlobalLoading } = useDashboard()
   const [query, setQuery] = useState('')
   const [platform, setPlatform] = useState('ebay')
   const [loading, setLoading] = useState(false)
@@ -17,7 +19,10 @@ export default function StoreSpy() {
   const [statusMsg, setStatusMsg] = useState('')
 
   useEffect(() => {
-    getUsage().then(setUsage).catch(() => {})
+    
+    getUsage().then(setUsage).catch(() => {}).finally(() => {
+      const timer = setTimeout(() => {} , 300)
+    })
   }, [])
 
   const handleSpy = async (e) => {
@@ -28,7 +33,7 @@ export default function StoreSpy() {
     setResults([])
     const msgs = ['Infiltrating seller profile...', 'Intercepting metadata...', 'Analyzing margins...', 'Synthesizing inventory...']
     let i = 0; setStatusMsg(msgs[0])
-    const interval = setInterval(() => { i = (i + 1) % msgs.length; setStatusMsg(msgs[i]) }, 3000)
+    const interval = setInterval(() => { i = (i + 1) % msgs.length; setStatusMsg(msgs[i]) }, 2000)
 
     try {
       const searchKeyword = platform === 'ebay' ? `seller:${query}` : query
@@ -36,15 +41,12 @@ export default function StoreSpy() {
       
       if (data.success) {
         setResults(data.products || [])
-        toast.success(`Infiltration successful! ${data.products?.length || 0} items extracted.`, {
-          className: 'bg-card border border-border text-foreground font-poppins text-xs font-black',
-          iconTheme: { primary: 'hsl(var(--primary))', secondary: 'hsl(var(--background))' }
-        })
+        toast.success(`Spying successful: ${data.products?.length || 0} items extracted`)
       } else {
         toast.error(data.error || 'Spying failed')
       }
     } catch (err) {
-      toast.error('Competitor data is being shielded. Try a different profile.')
+      toast.error('Competitor data shielded. Try a different profile.')
     } finally {
       setLoading(false); clearInterval(interval); setStatusMsg('')
     }
@@ -59,166 +61,144 @@ export default function StoreSpy() {
         url: product.url,
         platform: platform
       })
-      toast.success('Indexed to Vault', {
-        className: 'bg-card border border-border text-foreground font-poppins text-xs font-black',
-        iconTheme: { primary: 'hsl(var(--primary))', secondary: 'hsl(var(--background))' }
-      })
+      toast.success('Indexed to Vault')
     } catch (e) {
       toast.error('Vault capacity reached')
     }
   }
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-8 duration-500 pb-12 font-poppins text-foreground">
+    <div className="w-full max-w-6xl mx-auto space-y-10 pb-12 animate-in fade-in duration-500 font-poppins">
       
-      {/* Header section (Compact SaaS Style) */}
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
-        <div className="space-y-2.5">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[#BEF264] text-[8px] font-black tracking-[0.2em] uppercase shadow-sm">
-            <Eye size={10} className="animate-pulse" strokeWidth={3} /> <span className="text-primary">Omniscient View Active</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tighter leading-none">Store Spy</h1>
-          <p className="text-muted-foreground text-xs font-medium max-w-2xl leading-relaxed mt-2">
-            Reverse engineer rival strategies. Enter an eBay or Etsy seller profile to decrypt their highest-velocity product deployments.
-          </p>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--text)]">Store Intelligence</h1>
+          <p className="text-[var(--text2)] mt-1">Reverse engineer rival strategies and isolate their highest-velocity deployments.</p>
+        </div>
+        <div className="flex bg-[var(--surface)] p-1 rounded-xl border border-[var(--border)] shadow-sm">
+          {['ebay', 'etsy'].map(p => (
+            <button
+              key={p}
+              onClick={() => setPlatform(p)}
+              className={`px-6 py-2 rounded-lg text-xs font-bold transition-all uppercase tracking-widest ${
+                platform === p
+                  ? 'bg-[var(--text)] text-[var(--bg)] shadow-md'
+                  : 'text-[var(--text3)] hover:text-[var(--text)]'
+              }`}
+            >
+              {p}
+            </button>
+          ))}
         </div>
       </div>
 
-      <FeatureLock requiredPlan="growth" currentPlan={usage.plan} featureName="Store Spy Intelligence">
+      <FeatureLock requiredPlan="growth" currentPlan={usage.plan} featureName="Store Intelligence">
+        
         {/* Search Console */}
-        <div className="bg-card border border-border rounded-3xl p-6 sm:p-8 mb-10 shadow-sm relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-full h-1 bg-primary/20" />
-          <form onSubmit={handleSpy} className="flex flex-col sm:flex-row gap-4 relative z-10 w-full">
-            <div className="flex bg-muted p-1 rounded-xl border border-border shrink-0 shadow-inner">
-              {['ebay', 'etsy'].map(p => (
-                <button 
-                  key={p}
-                  type="button"
-                  onClick={() => setPlatform(p)}
-                  className={`px-5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-[0.2em] transition-all ${platform === p ? 'bg-background text-foreground shadow-sm ring-1 ring-border' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-            
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 shadow-sm">
+          <form onSubmit={handleSpy} className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-3 pointer-events-none">
-                <div className="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center group-focus-within:border-primary transition-all">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#BEF264] group-focus-within:text-primary transition-colors">
-                    <Search size={16} strokeWidth={2.5} />
-                  </span>
-                </div>
-              </div>
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text3)]" />
               <input
-                className="w-full bg-muted/50 border border-border rounded-xl h-12 pl-14 pr-4 text-xs font-black text-foreground outline-none focus:border-primary focus:bg-background transition-all placeholder:text-muted-foreground shadow-inner" 
-                placeholder={platform === 'ebay' ? "ENTER EBAY SELLER ID..." : "ENTER ETSY STORE NAME..."}
+                className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-xl h-14 pl-12 pr-4 text-sm font-medium text-[var(--text)] outline-none focus:border-[var(--lime)] transition-all placeholder:text-[var(--text3)]" 
+                placeholder={platform === 'ebay' ? "Enter eBay Seller ID (e.g. fashion_brand)..." : "Enter Etsy Store Name..."}
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 disabled={loading}
               />
             </div>
-            
             <button 
               type="submit" 
-              className="h-12 px-6 rounded-xl bg-foreground text-background text-[11px] font-black uppercase tracking-[0.2em] hover:opacity-80 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-md shadow-foreground/10 disabled:opacity-50 sm:w-auto w-full" 
               disabled={loading || !query.trim()}
+              className="h-14 px-8 bg-[var(--text)] text-[var(--bg)] rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-sm disabled:opacity-50 min-w-[160px]" 
             >
-              {loading ? <RefreshCw size={16} className="animate-spin text-primary" /> : <Eye size={16} strokeWidth={3} className="text-primary" />}
+              {loading ? <RefreshCw size={18} className="animate-spin text-[var(--lime)]" /> : <Eye size={18} className="text-[var(--lime)]" />}
               {loading ? 'Decrypting...' : 'Scout Seller'}
             </button>
           </form>
 
           {loading && (
-            <div className="mt-6 animate-in fade-in slide-in-from-top-4 duration-500">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_10px_rgba(204,255,0,0.8)]" />
-                  <span className="text-[9px] font-black text-primary uppercase tracking-[0.3em]">{statusMsg}</span>
-                </div>
-                <div className="flex gap-1">
-                  {[1,2,3,4].map(s => (
-                    <div key={s} className={`h-1 w-4 rounded-full ${s <= 2 ? 'bg-[#BEF264]' : 'bg-muted'}`} />
-                  ))}
-                </div>
-              </div>
-              <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden border border-border p-px">
-                <div className="h-full bg-primary rounded-full w-2/3 shadow-[0_0_10px_rgba(204,255,0,0.5)] animate-[shimmer_2s_infinite_linear]" />
-              </div>
+            <div className="mt-8 animate-in fade-in duration-500">
+               <div className="flex justify-between items-end mb-2">
+                  <div className="text-[10px] font-bold text-[var(--text3)] uppercase tracking-widest">{statusMsg}</div>
+                  <div className="text-[10px] font-bold text-[var(--lime)] uppercase tracking-widest">Intelligence Extraction Active</div>
+               </div>
+               <div className="h-1 w-full bg-[var(--bg)] rounded-full overflow-hidden">
+                  <div className="h-full bg-[var(--lime)] rounded-full animate-[progress_3s_infinite_linear]" />
+               </div>
             </div>
           )}
         </div>
 
+        {/* Results */}
         {results.length > 0 && (
-          <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
-            <div className="flex items-center justify-between mb-6 px-1">
-              <div className="flex items-center gap-3 w-full">
-                 <h2 className="text-[10px] font-black text-foreground uppercase tracking-[0.4em] shrink-0 flex items-center gap-2">
-                  <UserCheck size={12} strokeWidth={3} className="text-primary" /> Intelligence Report: {query}
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4 w-full">
+                 <h2 className="text-lg font-bold text-[var(--text)] whitespace-nowrap flex items-center gap-2">
+                    <UserCheck size={18} className="text-[var(--lime)]" /> Spy Intelligence: {query}
                  </h2>
-                 <div className="h-px bg-border w-full" />
-                 <div className="px-3 py-1 bg-card border border-border rounded-full text-[9px] font-black text-foreground uppercase tracking-widest shadow-sm shrink-0">
-                    {results.length} EXTRACTED
-                 </div>
+                 <div className="h-px bg-[var(--border)] w-full" />
+              </div>
+              <div className="ml-4 px-3 py-1 bg-[var(--hover-bg)] border border-[var(--border)] rounded-full text-[10px] font-bold text-[var(--text3)] uppercase tracking-widest whitespace-nowrap shadow-sm">
+                {results.length} Found
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
               {results.map((p, idx) => (
-                <div key={idx} className="group relative flex flex-col bg-card border border-border rounded-2xl p-4 hover:border-primary transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
-                  <div className="relative aspect-square rounded-xl overflow-hidden bg-white border border-border mb-4 p-4 flex items-center justify-center shadow-sm">
+                <div key={idx} className="group relative flex flex-col bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 hover:border-[var(--lime-border)] transition-all duration-300 shadow-sm">
+                  <div className="relative aspect-square rounded-xl overflow-hidden bg-white border border-[var(--border)] mb-5 p-4 flex items-center justify-center shadow-sm group-hover:scale-[1.02] transition-transform duration-500">
                     {p.image ? (
-                      <img src={p.image} alt={p.title} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500 opacity-90 group-hover:opacity-100" />
+                      <img src={p.image} alt={p.title} className="w-full h-full object-contain" />
                     ) : (
-                      <Package size={32} className="text-muted" strokeWidth={1.5} />
+                      <Package size={32} className="text-[var(--text3)]" strokeWidth={1} />
                     )}
+                    
                     <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
                       <button 
                         onClick={() => handleSaveToVault(p)}
-                        className="w-8 h-8 bg-foreground text-background rounded-lg flex items-center justify-center hover:opacity-80 transition-all shadow-md"
-                        title="Index to Vault"
+                        className="w-10 h-10 bg-[var(--text)] text-[var(--bg)] rounded-lg flex items-center justify-center hover:opacity-90 active:scale-95 transition-all shadow-md"
+                        title="Commit to Vault"
                       >
-                        <ShoppingCart size={14} strokeWidth={2.5} className="text-primary" />
+                        <ShoppingCart size={16} className="text-[var(--lime)]" strokeWidth={2.5} />
                       </button>
                       {p.url && (
                         <a 
-                          href={p.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="w-8 h-8 bg-background text-foreground rounded-lg border border-border flex items-center justify-center hover:bg-muted transition-all shadow-md"
+                          href={p.url} target="_blank" rel="noopener noreferrer"
+                          className="w-10 h-10 bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] rounded-lg flex items-center justify-center hover:bg-[var(--hover-bg)] transition-all shadow-md"
                         >
-                          <ExternalLink size={14} strokeWidth={2.5} />
+                          <ExternalLink size={16} />
                         </a>
                       )}
                     </div>
                   </div>
                   
-                  <div className="flex-1 flex flex-col">
-                    <h3 className="text-[13px] font-black text-foreground line-clamp-2 leading-snug mb-3 min-h-[2.5rem] group-hover:text-primary transition-colors" title={p.title}>
-                      {p.title}
-                    </h3>
-                    
-                    <div className="flex items-center gap-1.5 mb-4 min-h-[22px]">
-                      {p.sold_quantity && (
-                        <span className="text-[8px] font-black text-primary uppercase tracking-widest bg-primary/10 px-2 py-1 rounded-md border border-primary/30 shadow-sm">
-                          {p.sold_quantity} Sold
-                        </span>
-                      )}
-                      {p.is_bestseller && (
-                        <span className="text-[8px] font-black text-yellow-500 uppercase tracking-widest bg-yellow-500/10 px-2 py-1 rounded-md border border-yellow-500/20 shadow-sm">
-                          Bestseller
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="mt-auto flex items-center justify-between pt-4 border-t border-border/50">
-                      <span className="text-xl font-black text-foreground tracking-tighter tabular-nums">
-                        <span className="text-primary text-[13px] mr-1">$</span>{p.price?.toFixed(2) || '0.00'}
+                  <h3 className="text-sm font-bold text-[var(--text)] leading-tight line-clamp-2 mb-4 min-h-[2.5rem]" title={p.title}>
+                    {p.title}
+                  </h3>
+                  
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {p.sold_quantity && (
+                      <span className="px-1.5 py-0.5 rounded bg-[var(--lime-dim)] text-[var(--text)] border border-[var(--lime-border)] text-[9px] font-bold">
+                        {p.sold_quantity} Sold
                       </span>
-                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted border border-border">
-                        <TrendingUp size={10} className="text-primary" strokeWidth={3} />
-                        <span className="text-[9px] font-black text-foreground tabular-nums">{p.trend_score || 0}</span>
-                      </div>
+                    )}
+                    {p.is_bestseller && (
+                      <span className="px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 text-[9px] font-bold">
+                        Bestseller
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-auto flex items-center justify-between pt-4 border-t border-[var(--border)]">
+                    <span className="text-xl font-bold text-[var(--text)] tracking-tight tabular-nums">
+                      <span className="text-[var(--text3)] text-xs mr-0.5">$</span>{p.price?.toFixed(2) || '0.00'}
+                    </span>
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-[var(--hover-bg)] border border-[var(--border)]">
+                      <TrendingUp size={10} className="text-[var(--lime)]" strokeWidth={3} />
+                      <span className="text-[10px] font-bold text-[var(--text)] tabular-nums">{p.trend_score || 0}</span>
                     </div>
                   </div>
                 </div>
@@ -228,20 +208,18 @@ export default function StoreSpy() {
         )}
 
         {results.length === 0 && !loading && (
-          <div className="py-20 text-center bg-card border border-dashed border-border rounded-3xl group transition-colors duration-500">
-            <div className="w-16 h-16 bg-muted rounded-2xl border border-border flex items-center justify-center mb-6 mx-auto text-muted-foreground group-hover:bg-primary group-hover:text-[#111827] transition-all duration-500 shadow-sm">
-              <Target size={24} strokeWidth={1.5} />
-            </div>
-            <p className="text-lg font-black text-foreground mb-2 uppercase tracking-tight">Awaiting Target Intel</p>
-            <p className="text-muted-foreground text-[11px] font-medium max-w-sm mx-auto italic leading-relaxed px-4">Enter a competitor's profile signature to initiate the automated product research sequence.</p>
+          <div className="py-32 text-center bg-[var(--surface)] border border-dashed border-[var(--border)] rounded-2xl">
+            <Target size={48} className="mx-auto text-[var(--text3)] opacity-20 mb-6" />
+            <h3 className="text-lg font-bold text-[var(--text)] mb-2">Awaiting Target Intelligence</h3>
+            <p className="text-[var(--text3)] max-w-sm mx-auto text-sm italic">Capture a rival signature to reverse-engineer their marketplace deployments.</p>
           </div>
         )}
       </FeatureLock>
 
       <style>{`
-        @keyframes shimmer {
+        @keyframes progress {
           0% { transform: translateX(-100%); }
-          100% { transform: translateX(200%); }
+          100% { transform: translateX(100%); }
         }
       `}</style>
     </div>
