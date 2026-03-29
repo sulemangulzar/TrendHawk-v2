@@ -11,3 +11,4 @@ playwright
 python-multipart
 apscheduler
 fake-useragent
+curl_cffi

@@ -15,6 +15,12 @@ PROXY_PASS = os.getenv("PROXY_PASS")
 
 def get_proxy_url() -> str | None:
     """Returns a proxy URL string for httpx, or None if not configured."""
+    # Priority: Dedicated single PROXY_URL (useful for Fly.io/Docker)
+    dedicated_url = os.getenv("PROXY_URL")
+    if dedicated_url:
+        return dedicated_url
+
+    # Fallback: Component parts (legacy/local dev)
     if not all([PROXY_HOST, PROXY_PORT, PROXY_USER, PROXY_PASS]):
         print("[Proxy] ⚠️  Proxy credentials not set — no proxy will be used")
         return None
